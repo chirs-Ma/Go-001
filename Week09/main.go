@@ -3,11 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
-	"strings"
 	"time"
 )
-
-// 并发聊天室-服务端
 
 // 定义用户结构体类型
 type Client struct {
@@ -49,7 +46,7 @@ func HandleConnect(conn net.Conn) {
 	// 将新创建的结构体，添加到 map 中， key 值为获取到的网络地址（ip+port）
 	onlineMap[netAddr] = clnt
 
-	// 新创建一个 goroutine，专门给当前客户端发送消息
+	//给当前客户端发送消息
 	go WriteMsgToClient(clnt, conn)
 
 	// 广播新用户上线
@@ -81,17 +78,6 @@ func HandleConnect(conn net.Conn) {
 				message <- MakeMsg(clnt, "logout")
 				conn.Write([]byte(msg)) // 返回退出信息给客户端
 				break
-			} else if msg == "who" { // 如果用户发送了“who”指令，则展示所有在线用户
-				conn.Write([]byte("user list:\n"))
-				for _, user := range onlineMap {
-					userInfo := user.Addr + ":" + user.Name + "\n"
-					conn.Write([]byte(userInfo)) // 写给当前用户
-				}
-			} else if len(msg) >= 8 && msg[:6] == "rename" { // 修改用户名: rename|...
-				newName := strings.Split(msg, "|")[1]
-				clnt.Name = newName
-				onlineMap[netAddr] = clnt
-				conn.Write([]byte("rename successful\n"))
 			} else {
 				message <- MakeMsg(clnt, msg)
 			}
@@ -120,7 +106,6 @@ func Manager() {
 		// 通道 message 中有数据读到 msg 中，没有则阻塞
 		msg := <-message
 
-		// 一旦执行到这里，说明 message 中有数据了，解除阻塞，遍历 map
 		for _, clnt := range onlineMap {
 			clnt.Messages <- msg // 把从 Message 通道中读到的数据，写到 client 的 C 通道中
 		}
@@ -150,7 +135,7 @@ func main() {
 		}
 		fmt.Println("有新客户端连接进来...")
 
-		// 给新连接的客户端，单独创建一个 goroutine，处理客户端连接请求
+		// 处理客户端连接请求
 		go HandleConnect(conn)
 	}
 }
