@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"time"
 )
 
 // 定义用户结构体类型
@@ -52,8 +51,6 @@ func HandleConnect(conn net.Conn) {
 	// 广播新用户上线
 	message <- MakeMsg(clnt, "login")
 
-	hasData := make(chan bool) // 检测用户是否有消息发送
-
 	// 循环读取用户发送的消息，广播给在线用户
 	go func() {
 		buf := make([]byte, 2048) // 存储读到的用户信息
@@ -82,21 +79,9 @@ func HandleConnect(conn net.Conn) {
 				message <- MakeMsg(clnt, msg)
 			}
 
-			hasData <- true
 		}
 	}()
 
-	// 超时处理，60秒内没发言则自动退出聊天室
-	for {
-		select {
-		case <-hasData:
-		case <-time.After(60 * time.Second):
-			delete(onlineMap, netAddr)
-			message <- MakeMsg(clnt, "time out leave")
-			conn.Write([]byte("timeout")) // 通知当前用户断开连接
-			return                        // 结束当前应用
-		}
-	}
 }
 
 // 用户消息广播
